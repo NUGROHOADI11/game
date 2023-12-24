@@ -1,7 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../theme/app_color.dart';
 
 class HomeView extends StatefulWidget {
@@ -124,7 +126,6 @@ class _HomeViewState extends State<HomeView> {
         }
         showSnackBar(context, message: "Congratulation :D");
       } else if (cell.adjacentMines == 0) {
-        // Open adjacent cells if there are no mines nearby
         _openAdjacentCells(cell.row, cell.col);
       }
     });
@@ -222,6 +223,8 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final authControl = Get.find<AuthController>();
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -230,6 +233,18 @@ class _HomeViewState extends State<HomeView> {
           'Minesweeper',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              authControl.logout();
+            },
+            icon: const Icon(
+              Icons.logout_rounded,
+              size: 30,
+              color: Color(0xff230C02),
+            ),
+          )
+        ],
       ),
       body: ListView(
         children: [
