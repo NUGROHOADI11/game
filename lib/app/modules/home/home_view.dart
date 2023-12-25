@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_color.dart';
+import 'package:flame_audio/flame_audio.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -13,7 +14,7 @@ class HomeView extends StatefulWidget {
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   int rows = 12;
   int columns = 8;
   int totalMines = 10;
@@ -21,11 +22,40 @@ class _HomeViewState extends State<HomeView> {
 
   int flagCount = 10;
   bool gameOver = false;
+  bool backgroundSoundPlayed = false;
 
-  @override
+   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); 
     _intializeGrid();
+    _initializeBackSound();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); 
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // App is in the background, pause the background sound
+      FlameAudio.bgm.pause();
+    } else if (state == AppLifecycleState.resumed) {
+      // App is in the foreground, resume the background sound
+      FlameAudio.bgm.resume();
+    }
+  }
+
+  // Backsound in home
+  void _initializeBackSound() async {
+    if (!backgroundSoundPlayed) {
+      FlameAudio.bgm;
+      FlameAudio.bgm.play('Backsound.mp3', volume: 0.5);
+      backgroundSoundPlayed = true;
+    }
   }
 
   void _intializeGrid() {
@@ -114,7 +144,12 @@ class _HomeViewState extends State<HomeView> {
             }
           }
         }
-        showSnackBar(context, message: "Game Over !!!!");
+        _playGameOverSound();
+        Get.snackbar('Hadeuhhhh', 'Skill Issue Deck!!!',
+            colorText: Colors.white,
+            icon: const Icon(Icons.warning),
+            backgroundColor: Colors.red,
+            snackPosition: SnackPosition.TOP);
       } else if (_checkForWin()) {
         // Game won - show all cells
         gameOver = true;
@@ -124,11 +159,36 @@ class _HomeViewState extends State<HomeView> {
             cell.isOpen = true;
           }
         }
-        showSnackBar(context, message: "Congratulation :D");
+        _playWinSound();
+        Get.snackbar('Uhhhhh', 'Mengerikannnnnn',
+            colorText: Colors.black,
+            icon: const Icon(Icons.handshake),
+            backgroundColor: Colors.green,
+            snackPosition: SnackPosition.TOP);
       } else if (cell.adjacentMines == 0) {
         _openAdjacentCells(cell.row, cell.col);
       }
     });
+  }
+
+  // Backsound gameover
+  void _playGameOverSound() {
+    FlameAudio.bgm.stop(); // Stop the current background sound
+    FlameAudio.play('lose.wav', volume: 0.5);
+  }
+
+  // Backsound win
+  void _playWinSound() {
+    FlameAudio.bgm.stop(); // Stop the current background sound
+    FlameAudio.play('win.wav', volume: 0.5);
+  }
+
+  void _playTapSound() {
+    FlameAudio.play('tap.wav', volume: 0.5);
+  }
+
+  void _playLongTapSound() {
+    FlameAudio.play('flag.wav', volume: 0.5);
   }
 
   bool _checkForWin() {
@@ -183,7 +243,11 @@ class _HomeViewState extends State<HomeView> {
           }
         }
       }
-      showSnackBar(context, message: "Congratulation :D");
+      Get.snackbar('Uhhhhh', 'Mengerikannnnnn',
+          colorText: Colors.white,
+          icon: const Icon(Icons.handshake),
+          backgroundColor: Colors.green,
+          snackPosition: SnackPosition.TOP);
     }
   }
 
@@ -208,8 +272,23 @@ class _HomeViewState extends State<HomeView> {
       gameOver = false;
       flagCount = 10;
     });
-
     _intializeGrid();
+    _initializeNewBackSound();
+  }
+
+  // New backsound when reset
+  void _initializeNewBackSound() async {
+    FlameAudio.bgm;
+    FlameAudio.bgm.play('Backsound.mp3', volume: 0.5);
+  }
+
+  void _logout() {
+    // Stop the backsound when logging out
+    FlameAudio.bgm.stop();
+
+    // Add any other logout logic you may have
+    final authControl = Get.find<AuthController>();
+    authControl.logout();
   }
 
   void showSnackBar(BuildContext context, {required String message}) {
@@ -223,8 +302,6 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    final authControl = Get.find<AuthController>();
-
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -235,9 +312,7 @@ class _HomeViewState extends State<HomeView> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              authControl.logout();
-            },
+            onPressed: _logout,
             icon: const Icon(
               Icons.logout_rounded,
               size: 30,
@@ -254,6 +329,7 @@ class _HomeViewState extends State<HomeView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       "Flag",
@@ -297,8 +373,14 @@ class _HomeViewState extends State<HomeView> {
               final cell = grid[row][col];
 
               return GestureDetector(
-                onTap: () => _handleCellTap(cell),
-                onLongPress: () => _handleCellLongPress(cell),
+                onTap: () {
+                  _playTapSound();
+                  _handleCellTap(cell);
+                },
+                onLongPress: () {
+                  _playLongTapSound();
+                  _handleCellLongPress(cell);
+                },
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
